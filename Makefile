@@ -31,10 +31,12 @@ clean-all:
 	# Clean volumes
 	-docker volume prune -f 2>/dev/null
 	# Kill processes on our ports
-	-lsof -ti:3001 | xargs -r kill -9 2>/dev/null
-	-lsof -ti:8001 | xargs -r kill -9 2>/dev/null
-	-lsof -ti:5433 | xargs -r kill -9 2>/dev/null
-	-lsof -ti:6380 | xargs -r kill -9 2>/dev/null
+	-lsof -ti:3000 | xargs -r kill -9 2>/dev/null
+	-lsof -ti:8000 | xargs -r kill -9 2>/dev/null
+	-lsof -ti:5432 | xargs -r kill -9 2>/dev/null
+	-lsof -ti:6379 | xargs -r kill -9 2>/dev/null
+	# Clean frontend workspace
+	- (cd frontend && rm -rf node_modules .next package-lock.json)
 	@echo "✅ Cleanup complete"
 
 .PHONY: build
@@ -57,8 +59,8 @@ down:
 .PHONY: restart
 restart: clean-all build up
 	@echo "✅ Project Sentinel is running!"
-	@echo "   Dashboard: http://localhost:3001"
-	@echo "   API: http://localhost:8001"
+	@echo "   Dashboard: http://localhost:3000"
+	@echo "   API: http://localhost:8000"
 
 .PHONY: logs
 logs:
@@ -68,7 +70,7 @@ logs:
 status:
 	@echo "📊 Service Status:"
 	@echo -n "Backend: "
-	@curl -s http://localhost:8001/health >/dev/null 2>&1 && echo "✅ Healthy" || echo "❌ Offline"
+	@curl -s http://localhost:8000/health >/dev/null 2>&1 && echo "✅ Healthy" || echo "❌ Offline"
 	@echo -n "Frontend: "
-	@curl -s http://localhost:3001 >/dev/null 2>&1 && echo "✅ Running" || echo "❌ Not responding"
+	@curl -s http://localhost:3000 >/dev/null 2>&1 && echo "✅ Running" || echo "❌ Not responding"
 	@docker ps --filter "name=sentinel"

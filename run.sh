@@ -46,7 +46,7 @@ if ! command -v make &> /dev/null; then
     docker volume prune -f 2>/dev/null || true
     
     # Kill ports
-    for port in 3001 8001 5433 6380; do
+    for port in 3000 8000 5432 6379; do
         if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
             lsof -Pi :$port -sTCP:LISTEN -t | xargs kill -9 2>/dev/null || true
             print_status "Freed port $port"
@@ -65,7 +65,7 @@ if ! command -v make &> /dev/null; then
     sleep 10
     
     # Check health
-    if curl -s http://localhost:8001/health >/dev/null 2>&1; then
+    if curl -s http://localhost:8000/health >/dev/null 2>&1; then
         print_status "Backend is healthy"
     else
         print_warning "Backend not ready yet"
@@ -73,8 +73,8 @@ if ! command -v make &> /dev/null; then
     
     echo ""
     print_status "Project Sentinel is running!"
-    echo "   Dashboard: http://localhost:3001"
-    echo "   API: http://localhost:8001"
+    echo "   Dashboard: http://localhost:3000"
+    echo "   API: http://localhost:8000"
     echo ""
     echo "Stop with: docker-compose -p $PROJECT_NAME down"
 else

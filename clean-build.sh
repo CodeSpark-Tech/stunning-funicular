@@ -50,12 +50,21 @@ status "Docker cleanup complete"
 echo ""
 echo -e "${YELLOW}Step 2: Freeing Ports${NC}"
 
-for port in 3001 8001 5433 6380; do
+for port in 3000 8000 5432 6379; do
     if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
         lsof -Pi :$port -sTCP:LISTEN -t | xargs kill -9 2>/dev/null || true
         status "Freed port $port"
     fi
 done
+
+echo ""
+echo -e "${YELLOW}Step 2.5: Cleaning Frontend Workspace${NC}"
+if [ -d "frontend" ]; then
+    (cd frontend && rm -rf node_modules .next package-lock.json)
+    status "Frontend workspace cleaned"
+else
+    warning "Frontend directory not found, skipping cleanup."
+fi
 
 # Step 3: Generate unique project name
 PROJECT_NAME="sentinel-$(date +%Y%m%d-%H%M%S)"
@@ -85,14 +94,14 @@ echo ""
 echo -e "${YELLOW}Step 6: Health Check${NC}"
 
 # Check backend
-if curl -s http://localhost:8001/health >/dev/null 2>&1; then
+if curl -s http://localhost:8000/health >/dev/null 2>&1; then
     status "Backend API is healthy"
 else
     warning "Backend API not responding yet (may still be starting)"
 fi
 
 # Check frontend
-if curl -s http://localhost:3001 >/dev/null 2>&1; then
+if curl -s http://localhost:3000 >/dev/null 2>&1; then
     status "Frontend is running"
 else
     warning "Frontend not responding yet (may still be building)"
@@ -104,8 +113,8 @@ echo -e "${BLUE}═════════════════════�
 echo -e "${GREEN}    Project Sentinel is Running!      ${NC}"
 echo -e "${BLUE}═══════════════════════════════════════${NC}"
 echo ""
-echo -e "${BLUE}Dashboard:${NC} http://localhost:3001"
-echo -e "${BLUE}API:${NC} http://localhost:8001"
+echo -e "${BLUE}Dashboard:${NC} http://localhost:3000"
+echo -e "${BLUE}API:${NC} http://localhost:8000"
 echo ""
 echo -e "${YELLOW}Useful Commands:${NC}"
 echo "  View logs:    docker-compose -p $PROJECT_NAME logs -f"

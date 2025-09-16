@@ -58,6 +58,10 @@ docker network prune -f 2>/dev/null || true
 docker volume prune -f 2>/dev/null || true
 docker system prune -af --volumes 2>/dev/null || true
 
+# Step 2.5: Remove tagged images
+echo -e "\n${YELLOW}Step 2.5: Removing tagged project images...${NC}"
+docker images -q --filter=reference='*sentinel*' | xargs -r docker rmi -f 2>/dev/null || true
+
 # Step 3: Fix frontend dependencies
 echo -e "\n${YELLOW}Step 3: Fixing frontend dependencies...${NC}"
 cd frontend
