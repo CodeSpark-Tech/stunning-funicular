@@ -8,7 +8,7 @@ export default function ServiceStatus() {
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/health`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/health`);
         setServiceStatus(res.ok ? 'healthy' : 'degraded');
       } catch {
         setServiceStatus('offline');

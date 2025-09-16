@@ -2,12 +2,11 @@
 import './globals.css';
 import { Toaster } from 'react-hot-toast';
 import { Home, Users, BookOpen, Settings, Plus } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { motion } from 'framer-motion';
 import CreateCampaignModal from '@/components/CreateCampaignModal';
 import ReportModal from '@/components/ReportModal';
-import CampaignCard from '@/components/CampaignCard';
 import ServiceStatus from '@/components/ServiceStatus';
 
 const navItems = [
@@ -19,28 +18,7 @@ const navItems = [
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const [activeView, setActiveView] = useState('dashboard');
-  const [campaigns, setCampaigns] = useState([]);
   const { searchQuery, setSearchQuery, openCreateCampaign } = useStore();
-
-  useEffect(() => {
-    fetchCampaigns();
-    const interval = setInterval(fetchCampaigns, 10000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchCampaigns = async () => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/api/v1/reports`);
-      const data = await res.json();
-      setCampaigns(data);
-    } catch (error) {
-      console.error('Error fetching campaigns:', error);
-    }
-  };
-
-  const filteredCampaigns = campaigns.filter((c: any) =>
-    searchQuery ? c.ai_summary?.toLowerCase().includes(searchQuery.toLowerCase()) : true
-  );
 
   return (
     <html lang="en">
@@ -87,16 +65,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
             {/* Content Area */}
             <main className="flex-1 p-6 overflow-auto">
-              {activeView === 'dashboard' && (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {filteredCampaigns.map((campaign: any) => (
-                    <CampaignCard key={campaign.id} campaign={campaign} />
-                  ))}
-                </div>
-              )}
-              {activeView === 'users' && <div className="text-center py-12">Users View</div>}
-              {activeView === 'training' && <div className="text-center py-12">Training Content</div>}
-              {activeView === 'settings' && <div className="text-center py-12">Settings</div>}
+              {children}
             </main>
           </div>
 

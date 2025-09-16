@@ -21,7 +21,7 @@ export default function CreateCampaignModal() {
   if (!createCampaignModal) return null;
 
   const handleSubmit = async () => {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/api/v1/reports`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/reports`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
