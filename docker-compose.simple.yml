@@ -1,0 +1,57 @@
+services:
+  postgres-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: sentinel123
+      POSTGRES_DB: sentinel_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis-broker:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+
+  backend:
+    build: ./backend
+    ports:
+      - "8001:8000"
+    environment:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: sentinel123
+      POSTGRES_DB: sentinel_db
+      POSTGRES_HOST: postgres-db
+      POSTGRES_PORT: 5432
+      REDIS_HOST: redis-broker
+      REDIS_PORT: 6379
+    depends_on:
+      - postgres-db
+      - redis-broker
+
+  worker:
+    build: ./worker
+    environment:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: sentinel123
+      POSTGRES_DB: sentinel_db
+      POSTGRES_HOST: postgres-db
+      POSTGRES_PORT: 5432
+      REDIS_HOST: redis-broker
+      REDIS_PORT: 6379
+    depends_on:
+      - backend
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3001:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8001
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
