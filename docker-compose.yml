@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: sentinel_postgres
+    environment:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: sentinel123
+      POSTGRES_DB: sentinel_db
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "sentinel", "-d", "sentinel_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis-broker:
+    image: redis:7-alpine
+    container_name: sentinel_redis
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    container_name: sentinel_backend
+    ports:
+      - "8001:8000"
+    environment:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: sentinel123
+      POSTGRES_DB: sentinel_db
+      POSTGRES_HOST: postgres-db
+      POSTGRES_PORT: 5432
+      REDIS_HOST: redis-broker
+      REDIS_PORT: 6379
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      redis-broker:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build: ./worker
+    container_name: sentinel_worker
+    environment:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: sentinel123
+      POSTGRES_DB: sentinel_db
+      POSTGRES_HOST: postgres-db
+      POSTGRES_PORT: 5432
+      REDIS_HOST: redis-broker
+      REDIS_PORT: 6379
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: sentinel_frontend
+    ports:
+      - "3001:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8001
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

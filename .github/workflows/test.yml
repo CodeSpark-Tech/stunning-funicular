@@ -1,0 +1,141 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        working-directory: ./backend
+        run: |
+          pip install -r requirements.txt
+          pip install -r test_requirements.txt
+      
+      - name: Run backend tests
+        working-directory: ./backend
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+          REDIS_HOST: localhost
+        run: |
+          pytest tests/ -v --cov=. --cov-report=xml
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./backend/coverage.xml
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npm install --save-dev @testing-library/react @testing-library/jest-dom jest jest-environment-jsdom msw
+      
+      - name: Run frontend tests
+        working-directory: ./frontend
+        run: npm test -- --coverage --watchAll=false
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./frontend/coverage/lcov.info
+
+  e2e-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Start services
+        run: |
+          docker-compose up -d
+          sleep 30  # Wait for services to be ready
+      
+      - name: Install Playwright
+        working-directory: ./e2e
+        run: |
+          npm install
+          npx playwright install chromium
+      
+      - name: Run E2E tests
+        working-directory: ./e2e
+        run: npm test
+      
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+      
+      - name: Stop services
+        if: always()
+        run: docker-compose down
+
+  integration:
+    needs: [backend-tests, frontend-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build all containers
+        run: docker-compose build
+      
+      - name: Test container startup
+        run: |
+          docker-compose up -d
+          sleep 20
+          curl -f http://localhost:8001/health || exit 1
+          docker-compose down
